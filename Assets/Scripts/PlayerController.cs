@@ -4,13 +4,21 @@ using UnityEngine.InputSystem;
 public class PlayerController : MonoBehaviour
 {
     [Header("Movement Settings")]
-    public float moveSpeed = 10f;
-    public float jumpForce = 12f;
+    public float moveSpeed = 5f;
+    public float jumpForce = 2f;
     public LayerMask groundLayer;
 
     [Header("Combat Settings")]
     public Transform attackPoint; 
     public float attackRange = 0.5f;
+
+    [Header("Audio Settings")]
+    public AudioClip attackSound; 
+    public AudioClip rageSound; // 1. ADDED THIS SLOT
+    private AudioSource audioSource;
+
+    [Header("Rage Settings")]
+    public bool isRaging = false; 
 
     private Rigidbody2D rb;
     private BoxCollider2D col;
@@ -19,6 +27,10 @@ public class PlayerController : MonoBehaviour
     {
         rb = GetComponent<Rigidbody2D>();
         col = GetComponent<BoxCollider2D>();
+        
+        // AUTO-ASSIGN if null
+        audioSource = GetComponent<AudioSource>();
+        if (audioSource == null) audioSource = gameObject.AddComponent<AudioSource>();
     }
 
     void Update()
@@ -47,12 +59,15 @@ public class PlayerController : MonoBehaviour
 
     void Attack()
     {
-        // Now checks ALL nearby colliders (No LayerMask filter)
+        if (audioSource != null && attackSound != null)
+        {
+            audioSource.PlayOneShot(attackSound);
+        }
+
         Collider2D[] hitObjects = Physics2D.OverlapCircleAll(attackPoint.position, attackRange);
 
         foreach (Collider2D obj in hitObjects)
         {
-            // Verify if the object hit has the correct tag
             if (obj.CompareTag("Enemy"))
             {
                 if (obj.TryGetComponent(out EnemyController enemyScript))
@@ -61,6 +76,25 @@ public class PlayerController : MonoBehaviour
                 }
             }
         }
+    }
+
+    // 2. ADDED THIS FUNCTION
+    public void ActivateRage()
+    {
+        if (isRaging) return; // Safety check: don't play if already raging
+
+        isRaging = true;
+        
+        if (audioSource != null && rageSound != null)
+        {
+            audioSource.PlayOneShot(rageSound);
+        }
+    }
+
+    // Call this when rage ends
+    public void DeactivateRage()
+    {
+        isRaging = false;
     }
 
     private bool IsGrounded()

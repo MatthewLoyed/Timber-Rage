@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -5,14 +6,33 @@ public class PlayerHealth : MonoBehaviour
 {
     public float maxHealth = 100f;
     public float currentHealth;
-    public Slider healthSlider; // We will set this up next
+    public Slider healthSlider;
+
+    [Header("Audio")]
+    public AudioSource audioSource;
+    public AudioClip damageSound;
+
+    [Header("Rage Settings")]
+    public Color rageColor = new Color(0.5f, 0f, 0.5f);
 
     private float lastDamageTime;
-    public float damageCooldown = 1.0f; // Can only take damage every 1 sec
+    public float damageCooldown = 0.2f; // REDUCED for better feedback
+
+    private SpriteRenderer sr;
+    private Color originalColor;
+    private PlayerController playerController;
 
     void Start()
     {
         currentHealth = maxHealth;
+        sr = GetComponent<SpriteRenderer>();
+        playerController = GetComponent<PlayerController>();
+        
+        // AUTO-ASSIGN if slot is empty
+        if (audioSource == null) audioSource = GetComponent<AudioSource>();
+        
+        if (sr != null) originalColor = sr.color;
+
         if (healthSlider != null) 
         {
             healthSlider.maxValue = maxHealth;
@@ -27,17 +47,39 @@ public class PlayerHealth : MonoBehaviour
         currentHealth -= amount;
         lastDamageTime = Time.time;
 
-        if (healthSlider != null) healthSlider.value = currentHealth;
+        // PLAY DAMAGE SOUND
+        if (audioSource != null && damageSound != null)
+        {
+            audioSource.PlayOneShot(damageSound);
+        }
+        else
+        {
+            Debug.LogWarning("Missing AudioSource or DamageSound on Player!");
+        }
 
-        Debug.Log("Player Health: " + currentHealth);
+        if (healthSlider != null) healthSlider.value = currentHealth;
+        if (sr != null) StartCoroutine(FlashRed());
 
         if (currentHealth <= 0) Die();
     }
 
+    IEnumerator FlashRed()
+    {
+        sr.color = Color.red;
+        yield return new WaitForSeconds(0.1f);
+
+        if (playerController != null && playerController.isRaging)
+        {
+            sr.color = rageColor;
+        }
+        else
+        {
+            sr.color = originalColor;
+        }
+    }
+
     void Die()
     {
-        Debug.Log("GAME OVER");
-        // For now, just reload the scene or stop time
         UnityEngine.SceneManagement.SceneManager.LoadScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
     }
 }
